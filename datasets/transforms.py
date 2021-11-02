@@ -22,7 +22,8 @@ def crop(image, target, region):
     # should we do something wrt the original size?
     target["size"] = torch.tensor([h, w])
 
-    fields = ["labels", "area", "iscrowd"]
+    # area and iscrowd not available in Kitti dataset. Investigate later
+    fields = ["labels"] #, "area", "iscrowd"]
 
     if "boxes" in target:
         boxes = target["boxes"]
