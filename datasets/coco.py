@@ -265,7 +265,7 @@ def build(image_set, args):
 
 def build_kitti(image_set, args):
     root = Path(args.coco_path)
-    assert root.exists(), f'provided Kitti path {root} does not exist'
+    assert root.exists(), f'provided kitti path {root} does not exist'
 
     dataset = KittiDetection(root, transforms=make_kitti_transforms(image_set))
     return dataset
