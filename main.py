@@ -100,10 +100,19 @@ def get_args_parser():
                         help='number of distributed processes')
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
     parser.add_argument("--local_rank", default=-1, type=int)
+
+    # train/inference on local machine or server
+    parser.add_argument('--machine', default= 'LOCAL', 
+                        help = 'choose between LOCAL or SERVER to train/inference')
     return parser
 
 
 def main(args):
+
+    if args.machine == 'LOCAL':
+        args.batch_size = 2
+        args.coco_path = 'kitti'
+
     utils.init_distributed_mode(args)
     print("git:\n  {}\n".format(utils.get_sha()))
 
