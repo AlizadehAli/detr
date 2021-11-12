@@ -156,7 +156,8 @@ def detect(im, model, transform):
 
 # url = 'http://images.cocodataset.org/val2017/000000039769.jpg'
 # im = Image.open(requests.get(url, stream=True).raw)
-img_path = 'data_image/000268.png'
+img_id = '004038'
+img_path = 'data_image/'+img_id+'.png'
 im = Image.open(img_path)
 
 scores, boxes = detect(im, detr, transform)
@@ -167,12 +168,13 @@ def plot_results(pil_img, prob, boxes):
     ax = plt.gca()
     for p, (xmin, ymin, xmax, ymax), c in zip(prob, boxes.tolist(), COLORS * 100):
         ax.add_patch(plt.Rectangle((xmin, ymin), xmax - xmin, ymax - ymin,
-                                   fill=False, color=c, linewidth=3))
+                                   fill=False, color=c, linewidth=2))
         cl = p.argmax()
         text = f'{CLASSES[cl]}: {p[cl]:0.2f}'
-        ax.text(xmin, ymin, text, fontsize=15,
-                bbox=dict(facecolor='yellow', alpha=0.5))
+        ax.text(xmin, ymin, text, fontsize=10, c=c,
+                bbox=dict(facecolor='yellow', alpha=0.0))
     plt.axis('off')
+    plt.savefig('data_image/output/preCoco_'+img_id+'.png')
     plt.show()
     
 plot_results(im, scores, boxes)

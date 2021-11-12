@@ -17,22 +17,35 @@ torch.set_grad_enabled(False)
 # summary(resnet50().cuda(), (3, 800, 800))
 
 from main import get_args_parser
-
-img_id = '000010'
-# img_path = 'data_image/'+img_id+'.png'
-img_path = 'kitti/testing/image_2/'+img_id+'.png'
+img_id = '004038'
+img_path = 'data_image/'+img_id+'.png'
+# img_path = 'kitti/testing/image_2/'+img_id+'.png'
 
 parser = argparse.ArgumentParser('DETR training and evaluation script', parents=[get_args_parser()])
 args = parser.parse_args()
+args.dataset_file = 'coco'
 detr, criterion, postprocessors = build_model(args)
-model_path = './checkpoint/kitti/checkpoint0300.pth'
+model_path = './checkpoint/coco/checkpoint0299.pth'
 state_dict = torch.load(model_path)
 detr.load_state_dict(state_dict['model'])
 detr.eval()
 
 # COCO classes
 CLASSES = [
-    'Car', 'Van', 'Truck', 'Pedestrian', 'Person_sitting', 'Cyclist', 'Tram'
+    'N/A', 'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
+    'train', 'truck', 'boat', 'traffic light', 'fire hydrant', 'N/A',
+    'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse',
+    'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe', 'N/A', 'backpack',
+    'umbrella', 'N/A', 'N/A', 'handbag', 'tie', 'suitcase', 'frisbee', 'skis',
+    'snowboard', 'sports ball', 'kite', 'baseball bat', 'baseball glove',
+    'skateboard', 'surfboard', 'tennis racket', 'bottle', 'N/A', 'wine glass',
+    'cup', 'fork', 'knife', 'spoon', 'bowl', 'banana', 'apple', 'sandwich',
+    'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake',
+    'chair', 'couch', 'potted plant', 'bed', 'N/A', 'dining table', 'N/A',
+    'N/A', 'toilet', 'N/A', 'tv', 'laptop', 'mouse', 'remote', 'keyboard',
+    'cell phone', 'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'N/A',
+    'book', 'clock', 'vase', 'scissors', 'teddy bear', 'hair drier',
+    'toothbrush'
 ]
 
 # colors for visualization
@@ -41,7 +54,7 @@ COLORS = [[0.000, 0.447, 0.741], [0.850, 0.325, 0.098], [0.929, 0.694, 0.125],
 
 # standard PyTorch mean-std input image normalization
 transform = T.Compose([
-    T.Resize(400),
+    T.Resize(1000),
     T.ToTensor(),
     T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
 ])
@@ -104,7 +117,7 @@ def plot_results(pil_img, prob, boxes):
                 bbox=dict(facecolor='yellow', alpha=0.5))
     plt.axis('off')
     plt.tight_layout()
-    plt.savefig('data_image/output/kitti_'+img_id+'.png')
+    plt.savefig('data_image/output/coco_'+img_id+'.png')
     plt.show()
     
 plot_results(im, scores, boxes)
