@@ -15,6 +15,7 @@ import util.misc as utils
 from datasets import build_dataset, get_coco_api_from_dataset
 from engine import evaluate, train_one_epoch
 from models import build_model
+import os
 
 
 def get_args_parser():
@@ -101,9 +102,12 @@ def get_args_parser():
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
     parser.add_argument("--local_rank", default=-1, type=int)
 
-    # train/inference on local machine or server
-    parser.add_argument('--machine', default= 'LOCAL', 
+    # train/inference
+    parser.add_argument('--machine', default= 'SERVER', 
                         help = 'choose between LOCAL or SERVER to train/inference')
+    parser.add_argument('--TL_model', default='checkpoint/checkpoint0299.pth', 
+                        help = 'transfer learning (source: COCO, target: Kitti) OR learning from scratch')
+
     return parser
 
 
@@ -112,6 +116,7 @@ def main(args):
     if args.machine == 'LOCAL':
         args.batch_size = 2
         args.coco_path = 'kitti'
+       
 
     utils.init_distributed_mode(args)
     print("git:\n  {}\n".format(utils.get_sha()))
@@ -128,8 +133,27 @@ def main(args):
     np.random.seed(seed)
     random.seed(seed)
 
-    model, criterion, postprocessors = build_model(args)
-    model.to(device)
+    if os.path.isfile(args.TL_model):
+        if args.dataset_file == 'coco':
+            num_classes = 91
+        elif args.dataset_file == 'kitti':
+            num_classes = 7
+        else:
+            num_classes = 20
+
+        state_dict = torch.load(args.TL_model)
+        state_dict["model"]["class_embed.weight"] = torch.nn.Parameter(torch.zeros(num_classes+1, 256))
+        state_dict["model"]["class_embed.bias"] = torch.nn.Parameter(torch.zeros(num_classes+1))
+
+        model, criterion, postprocessors = build_model(args)
+        model.load_state_dict(state_dict['model'])
+
+        torch.nn.init.xavier_normal_(model.class_embed.weight)
+        model.to(device)
+    
+    else:    
+        model, criterion, postprocessors = build_model(args)
+        model.to(device)
 
     model_without_ddp = model
     if args.distributed:
