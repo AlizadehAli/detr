@@ -17,12 +17,12 @@ from engine import evaluate, train_one_epoch
 from models import build_model
 import os
 
-
+os.environ['CUDA_VISIBLE_DEVICES']='7'
 def get_args_parser():
     parser = argparse.ArgumentParser('Set transformer detector', add_help=False)
     parser.add_argument('--lr', default=1e-4, type=float)
     parser.add_argument('--lr_backbone', default=1e-5, type=float)
-    parser.add_argument('--batch_size', default=8, type=int)
+    parser.add_argument('--batch_size', default=4, type=int)
     parser.add_argument('--weight_decay', default=1e-4, type=float)
     parser.add_argument('--epochs', default=300, type=int)
     parser.add_argument('--lr_drop', default=200, type=int)
@@ -85,7 +85,7 @@ def get_args_parser():
     parser.add_argument('--coco_panoptic_path', type=str)
     parser.add_argument('--remove_difficult', action='store_true')
 
-    parser.add_argument('--output_dir', default='checkpoint/TL_kitti',
+    parser.add_argument('--output_dir', default='checkpoint/TL_kitti_classEmbed',
                         help='path where to save, empty for no saving')
     parser.add_argument('--device', default='cuda',
                         help='device to use for training / testing')
@@ -107,6 +107,12 @@ def get_args_parser():
                         help = 'choose between LOCAL or SERVER to train/inference')
     parser.add_argument('--TL_model', default='checkpoint/checkpoint0299.pth', 
                         help = 'transfer learning (source: COCO, target: Kitti) OR learning from scratch')
+    parser.add_argument('--tl_idx', default=1, type=int,
+                        help='choose transfer learning index between 0 to 3 if want to use transfer learning:\
+                              Only class_embed layer: 0 \
+                              class_embed & add/norm layers: 1 \
+                              class_embed & backbone & input_proj layers: 2 \
+                              class_embed & add/norm & backbone & input_proj & bbox_embed: 3')
 
     return parser
 
@@ -149,6 +155,9 @@ def main(args):
         model.load_state_dict(state_dict['model'])
 
         torch.nn.init.xavier_normal_(model.class_embed.weight)
+
+        model = design_TL(model, tl_strategy_idx=args.tl_idx, check_parameters=True)
+
         model.to(device)
     
     else:    
@@ -280,6 +289,57 @@ def main(args):
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))
+
+def design_TL(model, tl_strategy_idx, check_parameters=False):
+
+    if check_parameters:
+        count = 0
+        layers_grad = []
+        for name, param in model.named_parameters(): 
+            if param.requires_grad:
+                layers_grad.append(name)
+                count+=1
+        print('number of prameres for training before: ', count)
+        print('layers for trianing: ', layers_grad)
+
+    if tl_strategy_idx == 0:
+        #Only class embed
+        for name, param in model.named_parameters(): 
+            if 'class_embed' not in name:
+                param.requires_grad = False
+
+    elif tl_strategy_idx == 1:
+        # class embed & add/norm 
+        for name, param in model.named_parameters(): 
+            if ('norm' not in name) and ('class_embed' not in name):
+                param.requires_grad = False
+
+    elif tl_strategy_idx == 2:
+        # class embed & backbone & input_proj
+        for name, param in model.named_parameters(): 
+            if ('backbone' not in name) and ('class_embed' not in name) and \
+               ('input_proj' not in name):
+                param.requires_grad = False
+
+    elif tl_strategy_idx == 3:
+        # class embed and add/norm & backbone & input_proj & bbox embed
+        for name, param in model.named_parameters(): 
+            if ('norm' not in name) and ('class_embed' not in name) and \
+                ('backbone' not in name) and ('bbox_embed' not in name) and \
+                ('input_proj' not in name):
+                param.requires_grad = False
+
+    if check_parameters:
+        count = 0
+        layers_grad = []
+        for name, param in model.named_parameters(): 
+            if param.requires_grad:
+                layers_grad.append(name)
+                count+=1
+        print('number of prameres for training after: ', count)
+        print('layers for trianing: ', layers_grad)
+
+    return model
 
 
 if __name__ == '__main__':
